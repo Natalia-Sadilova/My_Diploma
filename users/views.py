@@ -65,6 +65,26 @@ class RegisterView(generics.CreateAPIView):
             'Message': 'Регистрация успешна. На вашу почту отправлено письмо с подтверждением.',
             'User': UserSerializer(user).data
         }, status=status.HTTP_201_CREATED)
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        with transaction.atomic():
+            user = serializer.save()
+            token = ConfirmEmailToken.objects.create(user=user)
+            
+            # Асинхронная отправка email
+            send_verification_email.delay(
+                user_id=user.id,
+                user_email=user.email,
+                verification_token=token.key
+            )
+        
+        return Response({
+            'Status': True,
+            'Message': 'Регистрация успешна. На вашу почту отправлено письмо с подтверждением.'
+        }, status=status.HTTP_201_CREATED)
 
 
 class VerifyEmailView(APIView):
