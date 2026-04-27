@@ -140,6 +140,27 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Europe/Moscow'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 минут
+
+# Celery Beat (периодические задачи)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Настройки для email задач
+EMAIL_MAX_RETRIES = 3
+EMAIL_RETRY_DELAY = 60  # секунд
+
+# Настройки для импорта
+IMPORT_MAX_RETRIES = 2
+IMPORT_RETRY_DELAY = 300  # 5 минут
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Procurement API',
     'DESCRIPTION': 'API для системы закупок',
