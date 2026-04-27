@@ -1,17 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import generics, filters
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 import yaml
 import json
-from rest_framework import generics, filters
-from rest_framework.permissions import AllowAny
-from django_filters.rest_framework import DjangoFilterBackend
+
 from .services import ProductImportService
+from .tasks import do_import  # Импорт Celery задачи
 from shops.models import Shop
 from .models import Category, Product, ProductInfo
 from .serializers import CategorySerializer, ProductSerializer, ProductInfoSerializer
@@ -22,8 +22,8 @@ class PartnerUpdate(APIView):
     API для обновления прайса от поставщика (магазина)
     
     Поддерживает:
-    - Загрузку файла (YAML или JSON)
-    - Импорт по URL
+    - Загрузку файла (YAML или JSON) - асинхронно через Celery
+    - Импорт по URL - синхронно
     """
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -53,68 +53,75 @@ class PartnerUpdate(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        data = None
-        
-        # Вариант 1: Импорт по URL
+        # Вариант 1: Импорт по URL (синхронно)
         url = request.data.get('url')
         if url:
             try:
                 validator = URLValidator()
                 validator(url)
                 data = ProductImportService.load_yaml_from_url(url)
+                
+                # Обработка импортированных данных
+                result = ProductImportService.process_import_data(data, shop_id, request.user.id)
+                
+                if result.get('success'):
+                    return Response({
+                        'Status': True,
+                        'Message': result.get('message'),
+                        'Shop': result.get('shop_name'),
+                        'Categories': result.get('categories_count'),
+                        'Goods': result.get('goods_count')
+                    })
+                else:
+                    return Response({
+                        'Status': False,
+                        'Error': result.get('error')
+                    })
             except ValidationError as e:
                 return Response({'Status': False, 'Error': f'Некорректный URL: {str(e)}'})
             except Exception as e:
                 return Response({'Status': False, 'Error': str(e)})
         
-        # Вариант 2: Загрузка файла
+        # Вариант 2: Загрузка файла (АСИНХРОННО через Celery)
         elif request.FILES.get('file'):
             file_obj = request.FILES['file']
             file_name = file_obj.name.lower()
             
-            try:
-                if file_name.endswith(('.yaml', '.yml')):
-                    data = ProductImportService.load_yaml_from_file(file_obj)
-                elif file_name.endswith('.json'):
-                    data = ProductImportService.load_json_from_file(file_obj)
-                else:
-                    return Response({
-                        'Status': False,
-                        'Error': 'Неподдерживаемый формат файла. Используйте YAML или JSON'
-                    })
-            except Exception as e:
-                return Response({'Status': False, 'Error': str(e)})
+            # Проверка формата файла
+            if not (file_name.endswith(('.yaml', '.yml', '.json'))):
+                return Response({
+                    'Status': False,
+                    'Error': 'Неподдерживаемый формат файла. Используйте YAML или JSON'
+                })
+            
+            # Запускаем асинхронный импорт через Celery
+            file_content = file_obj.read()
+            task = do_import.delay(
+                file_content=file_content,
+                filename=file_name,
+                shop_id=shop_id,
+                user_id=request.user.id
+            )
+            
+            return Response({
+                'Status': True,
+                'Message': 'Импорт запущен в фоновом режиме',
+                'TaskId': task.id
+            }, status=status.HTTP_202_ACCEPTED)
         
         else:
             return Response({
                 'Status': False,
                 'Error': 'Не указаны все необходимые аргументы. Укажите url или загрузите файл'
-            })
-        
-        # Обработка импортированных данных
-        result = ProductImportService.process_import_data(data, shop_id, request.user.id)
-        
-        if result.get('success'):
-            return Response({
-                'Status': True,
-                'Message': result.get('message'),
-                'Shop': result.get('shop_name'),
-                'Categories': result.get('categories_count'),
-                'Goods': result.get('goods_count')
-            })
-        else:
-            return Response({
-                'Status': False,
-                'Error': result.get('error')
-            })
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PartnerState(APIView):
-    "API для управления статусом магазина (включен/выключен прием заказов)"
+    """API для управления статусом магазина (включен/выключен прием заказов)"""
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        "Получить текущий статус магазина"
+        """Получить текущий статус магазина"""
         if request.user.type != 'shop':
             return Response({'Status': False, 'Error': 'Только для магазинов'})
         
@@ -129,7 +136,7 @@ class PartnerState(APIView):
             return Response({'Status': False, 'Error': 'Магазин не найден'})
     
     def post(self, request):
-        "Изменить статус магазина"
+        """Изменить статус магазина"""
         if request.user.type != 'shop':
             return Response({'Status': False, 'Error': 'Только для магазинов'})
         
@@ -153,11 +160,11 @@ class PartnerState(APIView):
 
 
 class PartnerOrders(APIView):
-    "  API для получения списка заказов магазина"
+    """API для получения списка заказов магазина"""
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        "Получить заказы, содержащие товары этого магазина"
+        """Получить заказы, содержащие товары этого магазина"""
         if request.user.type != 'shop':
             return Response({'Status': False, 'Error': 'Только для магазинов'})
         
@@ -169,7 +176,7 @@ class PartnerOrders(APIView):
             
             orders = Order.objects.filter(
                 ordered_items__product_info__shop=shop,
-                state__in=['confirmed', 'assembled', 'sent', 'delivered'] 
+                state__in=['confirmed', 'assembled', 'sent', 'delivered']
             ).distinct()
             
             orders_data = []
@@ -214,7 +221,8 @@ class PartnerOrders(APIView):
             
         except Shop.DoesNotExist:
             return Response({'Status': False, 'Error': 'Магазин не найден'})
-        
+
+
 class CategoryListView(generics.ListAPIView):
     """
     Список всех категорий
@@ -224,6 +232,7 @@ class CategoryListView(generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
+
 
 class ProductListView(generics.ListAPIView):
     """
@@ -283,9 +292,9 @@ class ProductDetailView(generics.RetrieveAPIView):
         
         # Добавляем информацию о наличии от разных магазинов
         product_infos = ProductInfo.objects.filter(
-            product=instance, 
+            product=instance,
             shop__state=True,  # Только активные магазины
-            quantity__gt=0      # Только товары в наличии
+            quantity__gt=0     # Только товары в наличии
         ).select_related('shop')
         
         data['product_infos'] = ProductInfoSerializer(product_infos, many=True).data
