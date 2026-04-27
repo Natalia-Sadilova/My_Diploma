@@ -20,6 +20,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from products.admin_views import admin_import_products, admin_import_status
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,6 +29,8 @@ urlpatterns = [
     path('api/v1/orders/', include('orders.urls')),
     path('api/v1/shops/', include('shops.urls')),
     path('api/v1/cart/', include('cart.urls')),
+    path('admin/import-products/', admin_import_products, name='admin_import_products'),
+    path('admin/import-status/<str:task_id>/', admin_import_status, name='admin_import_status'),
     
     # drf-spectacular endpoints (НОВЫЕ)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
