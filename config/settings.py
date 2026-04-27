@@ -20,14 +20,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
+    'django_rest_passwordreset',
     'corsheaders',
     'debug_toolbar',
     'django_filters',
-    'drf_yasg',
-    'django_rest_passwordreset',
+    'drf_spectacular',
     
     # Local apps
     'users',
@@ -116,6 +115,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # JWT Settings
@@ -145,3 +145,9 @@ CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Procurement API',
+    'DESCRIPTION': 'API для системы закупок',
+    'VERSION': '1.0.0',
+}
