@@ -16,8 +16,34 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Procurement Automation API",
+        default_version='v1',
+        description="API for automating purchases in retail networks",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path('admin/', admin.site.urls),
+    path('api/v1/users/', include('users.urls')),
+    path('api/v1/products/', include('products.urls')),
+    path('api/v1/orders/', include('orders.urls')),
+    path('api/v1/shops/', include('shops.urls')),
+    path('api/v1/cart/', include('cart.urls')),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0)),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0)),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [path('__debug__/', include('debug_toolbar.urls'))]
