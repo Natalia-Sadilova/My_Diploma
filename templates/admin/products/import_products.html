@@ -1,0 +1,94 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div class="module">
+    <h2>Импорт товаров (асинхронный)</h2>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+            <div class="form-row">
+                <label for="shop_id">Выберите магазин:</label>
+                <select name="shop_id" id="shop_id" required>
+                    <option value="">--------</option>
+                    {% for shop in shops %}
+                    <option value="{{ shop.id }}">{{ shop.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <label>Тип импорта:</label>
+                <div>
+                    <input type="radio" name="import_type" value="file" id="import_file_type" checked>
+                    <label for="import_file_type">Загрузка файла</label>
+                    
+                    <input type="radio" name="import_type" value="url" id="import_url_type">
+                    <label for="import_url_type">Импорт по URL</label>
+                </div>
+            </div>
+            
+            <div class="form-row" id="file_upload_row">
+                <label for="import_file">Файл (YAML или JSON):</label>
+                <input type="file" name="import_file" id="import_file" accept=".yaml,.yml,.json">
+            </div>
+            
+            <div class="form-row" id="url_input_row" style="display: none;">
+                <label for="import_url">URL для импорта:</label>
+                <input type="url" name="import_url" id="import_url" placeholder="https://example.com/price_list.yaml">
+                <div class="help">Поддерживаются форматы YAML и JSON</div>
+            </div>
+        </fieldset>
+        
+        <div class="submit-row">
+            <input type="submit" value="Запустить импорт" class="default">
+        </div>
+    </form>
+</div>
+
+<script>
+    // Переключение между файлом и URL
+    const fileRadio = document.getElementById('import_file_type');
+    const urlRadio = document.getElementById('import_url_type');
+    const fileRow = document.getElementById('file_upload_row');
+    const urlRow = document.getElementById('url_input_row');
+    
+    fileRadio.addEventListener('change', function() {
+        if (this.checked) {
+            fileRow.style.display = 'block';
+            urlRow.style.display = 'none';
+        }
+    });
+    
+    urlRadio.addEventListener('change', function() {
+        if (this.checked) {
+            fileRow.style.display = 'none';
+            urlRow.style.display = 'block';
+        }
+    });
+</script>
+
+<style>
+    .form-row {
+        margin-bottom: 15px;
+        padding: 10px;
+    }
+    .form-row label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .help {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+    select, input[type="file"], input[type="url"] {
+        width: 100%;
+        max-width: 500px;
+        padding: 8px;
+    }
+</style>
+{% endblock %}
