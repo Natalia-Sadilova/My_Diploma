@@ -1,0 +1,16 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <h2>Быстрые действия</h2>
+        <table>
+            <tr>
+                <th><a href="{% url 'admin_import_products' %}">Импорт товаров</a></th>
+                <td>Асинхронный импорт товаров из файла или URL</td>
+            </tr>
+        </table>
+    </div>
+    {{ block.super }}
+</div>
+{% endblock %}
