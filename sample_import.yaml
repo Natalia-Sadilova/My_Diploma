@@ -1,0 +1,45 @@
+shop: "Электроника Про"
+categories:
+  - id: 1
+    name: "Смартфоны"
+  - id: 2
+    name: "Ноутбуки"
+  - id: 3
+    name: "Планшеты"
+
+goods:
+  - id: 1001
+    category: 1
+    model: "SM-G998B"
+    name: "Samsung Galaxy S21"
+    price: 59990
+    price_rrc: 69990
+    quantity: 15
+    parameters:
+      "Диагональ": "6.2 дюйма"
+      "Память": "8/128 ГБ"
+      "Цвет": "Черный"
+      
+  - id: 1002
+    category: 1
+    model: "iPhone 13"
+    name: "Apple iPhone 13"
+    price: 69990
+    price_rrc: 79990
+    quantity: 10
+    parameters:
+      "Диагональ": "6.1 дюйма"
+      "Память": "4/128 ГБ"
+      "Цвет": "Синий"
+      
+  - id: 2001
+    category: 2
+    model: "XPS 13"
+    name: "Dell XPS 13"
+    price: 89990
+    price_rrc: 99990
+    quantity: 5
+    parameters:
+      "Процессор": "Intel i7"
+      "Память": "16/512 ГБ"
+      "Экран": "13.4 дюйма"
