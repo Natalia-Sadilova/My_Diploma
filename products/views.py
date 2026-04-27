@@ -8,7 +8,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 import yaml
 import json
-
+from rest_framework import generics, filters
+from rest_framework.permissions import AllowAny
+from django_filters.rest_framework import DjangoFilterBackend
 from .services import ProductImportService
 from shops.models import Shop
 from .models import Category, Product, ProductInfo
@@ -212,3 +214,80 @@ class PartnerOrders(APIView):
             
         except Shop.DoesNotExist:
             return Response({'Status': False, 'Error': 'Магазин не найден'})
+        
+class CategoryListView(generics.ListAPIView):
+    """
+    Список всех категорий
+    
+    GET /api/v1/products/categories/
+    """
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [AllowAny]
+
+class ProductListView(generics.ListAPIView):
+    """
+    Список товаров с фильтрацией
+    
+    GET /api/v1/products/
+    
+    Параметры фильтрации:
+    - category_id: ID категории
+    - shop_id: ID магазина
+    - min_price: минимальная цена
+    - max_price: максимальная цена
+    - search: поиск по названию
+    """
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category_id']
+    search_fields = ['name', 'category__name']
+    ordering_fields = ['name']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Фильтр по магазину
+        shop_id = self.request.query_params.get('shop_id')
+        if shop_id:
+            queryset = queryset.filter(product_infos__shop_id=shop_id)
+        
+        # Фильтр по цене
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+        
+        if min_price:
+            queryset = queryset.filter(product_infos__price__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(product_infos__price__lte=max_price)
+        
+        return queryset.distinct()
+
+
+class ProductDetailView(generics.RetrieveAPIView):
+    """
+    Детальная информация о товаре
+    
+    GET /api/v1/products/<id>/
+    """
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
+        
+        # Добавляем информацию о наличии от разных магазинов
+        product_infos = ProductInfo.objects.filter(
+            product=instance, 
+            shop__state=True,  # Только активные магазины
+            quantity__gt=0      # Только товары в наличии
+        ).select_related('shop')
+        
+        data['product_infos'] = ProductInfoSerializer(product_infos, many=True).data
+        
+        return Response(data)
