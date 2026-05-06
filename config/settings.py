@@ -12,6 +12,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
+    'baton',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -28,12 +29,13 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'social_django',
     
-    # Local apps
     'users',
     'products',
     'orders',
     'shops',
     'cart',
+
+    'baton.autodiscover',
 ]
 
 MIDDLEWARE = [
@@ -179,7 +181,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# ========== Авторизация через соцсети ==========
+# Авторизация через соцсети 
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',   # Google авторизация
@@ -223,3 +225,35 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
 )
+
+# Настройка вида админки
+BATON = {
+    'SITE_HEADER': 'Procurement Admin',
+    'SITE_TITLE': 'Администрирование',
+    'INDEX_TITLE': 'Панель управления закупками',
+    'SUPPORT_HREF': 'https://github.com/otto-torino/django-baton/issues',
+    'COPYRIGHT': '© 2025 Procurement System',
+    'POWERED_BY': '<a href="https://github.com/otto-torino/django-baton">Django Baton</a>',
+    'CONFIRM_UNSAVED_CHANGES': True,
+    'SHOW_MULTIPART_UPLOADING': True,
+    'ENABLE_IMAGES_PREVIEW': True,
+    'CHANGEFORM_FIXED_SUBMIT_ROW': True,
+    'MENU_TITLE': 'Меню',
+    'MENU_ALWAYS_COLLAPSED': False,
+    'MESSAGES_TOASTS': ['warning', 'error'],
+    'GRAVATAR_ENABLED': False,
+    'FORCE_THEME': None,  # 'light' или 'dark'
+    
+    # Настройка меню
+    'MENU': (
+        { 'type': 'title', 'label': 'Управление', 'icon': 'dashboard' },
+        
+        { 'type': 'app', 'name': 'users', 'label': 'Пользователи', 'icon': 'people' },
+        { 'type': 'app', 'name': 'shops', 'label': 'Магазины', 'icon': 'store' },
+        { 'type': 'app', 'name': 'products', 'label': 'Товары', 'icon': 'inventory' },
+        { 'type': 'app', 'name': 'orders', 'label': 'Заказы', 'icon': 'shopping_cart' },
+        
+        { 'type': 'title', 'label': 'Дополнительно', 'icon': 'settings' },
+        { 'type': 'model', 'label': 'Импорт товаров', 'name': 'import', 'app': 'products', 'icon': 'upload_file' },
+    ),
+}

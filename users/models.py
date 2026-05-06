@@ -83,6 +83,11 @@ class User(AbstractUser):
             'Отмените выбор вместо удаления аккаунтов.'
         ),
     )
+    is_verified = models.BooleanField(
+        default=False,
+        verbose_name='Email подтверждён',
+        help_text='Пользователь подтвердил свой email'
+    )
     type = models.CharField(
         verbose_name='Тип пользователя', 
         choices=USER_TYPE_CHOICES, 
