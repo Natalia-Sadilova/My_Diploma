@@ -12,7 +12,6 @@ USER_TYPE_CHOICES = (
 
 
 class UserManager(BaseUserManager):
-    """Миксин для управления пользователями"""
     use_in_migrations = True
 
     def _create_user(self, email, password, **extra_fields):
@@ -25,18 +24,32 @@ class UserManager(BaseUserManager):
         return user
 
     def create_user(self, email, password=None, **extra_fields):
+        """Создание обычного пользователя"""
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
+        extra_fields.setdefault('is_active', False)  # Обычный пользователь требует подтверждения email
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(self, email, password, **extra_fields):
+        """
+        Создание суперпользователя
+        Суперпользователь создается активным и имеет полные права
+        """
+        # Устанавливаем значения по умолчанию для суперпользователя
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-
+        extra_fields.setdefault('is_active', True) 
+        
+        # Дополнительные поля для суперпользователя
+        extra_fields.setdefault('type', 'buyer')  
+        
+        # Проверки корректности
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Суперпользователь должен иметь is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Суперпользователь должен иметь is_superuser=True.')
+        if extra_fields.get('is_active') is not True:
+            raise ValueError('Суперпользователь должен иметь is_active=True.')
 
         return self._create_user(email, password, **extra_fields)
 
@@ -59,10 +72,12 @@ class User(AbstractUser):
         error_messages={
             'unique': _("Пользователь с таким именем уже существует."),
         },
+        blank=True,  
+        default='', 
     )
     is_active = models.BooleanField(
         _('active'),
-        default=False,
+        default=False,  
         help_text=_(
             'Определяет, следует ли считать этого пользователя активным. '
             'Отмените выбор вместо удаления аккаунтов.'
@@ -76,7 +91,9 @@ class User(AbstractUser):
     )
 
     def __str__(self):
-        return f'{self.first_name} {self.last_name}'
+        if self.first_name or self.last_name:
+            return f'{self.first_name} {self.last_name}'.strip()
+        return self.email
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -98,16 +115,16 @@ class ConfirmEmailToken(models.Model):
         User,
         related_name='confirm_email_tokens',
         on_delete=models.CASCADE,
-        verbose_name=_("Пользователь, связанный с этим токеном сброса пароля")
+        verbose_name=_("Пользователь, связанный с этим токеном")
     )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name=_("Дата генерации токена")
+        verbose_name=_("Дата создания токена")
     )
 
     key = models.CharField(
-        _("Key"),
+        _("Ключ"),
         max_length=64,
         db_index=True,
         unique=True
@@ -119,4 +136,4 @@ class ConfirmEmailToken(models.Model):
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Токен подтверждения электронной почты для пользователя {self.user}"
+        return f"Токен подтверждения для пользователя {self.user.email}"
