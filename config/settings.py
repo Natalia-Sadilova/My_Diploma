@@ -2,6 +2,9 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from hawk_python_sdk import Hawk
 
 load_dotenv()
 
@@ -258,3 +261,18 @@ BATON = {
         { 'type': 'model', 'label': 'Импорт товаров', 'name': 'import', 'app': 'products', 'icon': 'upload_file' },
     ),
 }
+
+# HAWK
+HAWK_DSN = os.getenv('HAWK_DSN', '')
+
+if HAWK_DSN:
+    sentry_sdk.init(
+        dsn=HAWK_DSN,  # ← ваш токен будет использован здесь
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=1.0,
+        environment=os.getenv('HAWK_ENVIRONMENT', 'development'),
+        release='procurement@1.0.0',
+    )
+    
+    # Проверка подключения
+    print(f"Hawk initialized with DSN: {HAWK_DSN[:50]}...")
