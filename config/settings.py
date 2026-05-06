@@ -15,6 +15,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
+    'cacheops',
     'baton',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -33,6 +34,7 @@ INSTALLED_APPS = [
     'social_django',
     'imagekit',
     
+    'performance',
     'users',
     'products',
     'orders',
@@ -276,3 +278,44 @@ if HAWK_DSN:
     
     # Проверка подключения
     print(f"Hawk initialized with DSN: {HAWK_DSN[:50]}...")
+
+# CACHEOPS REDIS
+# Используем тот же Redis, что и для Celery, но другую базу данных
+CACHEOPS_REDIS = {
+    'host': os.getenv('REDIS_HOST', 'localhost'),
+    'port': int(os.getenv('REDIS_PORT', 6379)),
+    'db': 1,  # Используем базу 1 для кэша (отдельно от Celery, который использует db 0)
+    'socket_timeout': 3,
+}
+
+# Настройка кэширования для моделей
+CACHEOPS = {
+    # Кэшировать все запросы к Product на 15 минут
+    'products.product': {'ops': 'all', 'timeout': 60 * 15},
+    
+    # Кэшировать запросы к Category на 1 час
+    'products.category': {'ops': 'all', 'timeout': 60 * 60},
+    
+    # Кэшировать запросы к Shop на 30 минут
+    'shops.shop': {'ops': 'all', 'timeout': 60 * 30},
+    
+    # Кэшировать запросы к ProductInfo (цены и остатки) на 5 минут
+    'products.productinfo': {'ops': 'all', 'timeout': 60 * 5},
+    
+    # Для User кэшируем только get-запросы (не списки)
+    'users.user': {'ops': 'get', 'timeout': 60 * 15},
+    
+    # Для Order кэшируем только get-запросы (не списки)
+    'orders.order': {'ops': 'get', 'timeout': 60 * 5},
+    
+    # Для заказанных позиций кэш отключён (они часто меняются)
+    'orders.orderitem': None,
+}
+
+# Настройки по умолчанию для всех моделей (отключено)
+CACHEOPS_DEFAULTS = {
+    'timeout': 60 * 60  # 1 час по умолчанию
+}
+
+# Включаем деградацию при ошибках Redis (чтобы приложение не падало)
+CACHEOPS_DEGRADE_ON_FAILURE = True
