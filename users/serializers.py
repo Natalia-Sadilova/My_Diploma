@@ -7,17 +7,30 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения данных пользователя"""
     full_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+    avatar_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = [
             'id', 'email', 'username', 'first_name', 'last_name', 'full_name',
-            'type', 'company', 'position', 'is_active'
+            'type', 'company', 'position', 'is_active', 'is_verified',
+            'avatar_url', 'avatar_thumbnail_url'
         ]
-        read_only_fields = ['id', 'is_active']
+        read_only_fields = ['id', 'is_active', 'is_verified']
     
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+    
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            return obj.avatar.url
+        return None
+    
+    def get_avatar_thumbnail_url(self, obj):
+        if obj.avatar_thumbnail:
+            return obj.avatar_thumbnail.url
+        return None
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -66,7 +79,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     """Сериализатор для обновления профиля"""
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'company', 'position']
+        fields = ['first_name', 'last_name', 'username', 'company', 'position', 'avatar']
     
     def validate_username(self, value):
         if User.objects.exclude(id=self.instance.id).filter(username=value).exists():

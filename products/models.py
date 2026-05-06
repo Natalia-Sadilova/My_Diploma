@@ -1,4 +1,6 @@
 from django.db import models
+from imagekit.models import ProcessedImageField, ImageSpecField
+from imagekit.processors import ResizeToFill, ResizeToFit
 from shops.models import Shop
 
 class Category(models.Model):
@@ -27,6 +29,33 @@ class Product(models.Model):
         related_name='products', 
         blank=True,
         on_delete=models.CASCADE
+    )
+    
+    # Основное изображение товара
+    image = ProcessedImageField(
+        upload_to='products/',
+        processors=[ResizeToFit(800, 800)],  # Ограничиваем размер, сохраняя пропорции
+        format='JPEG',
+        options={'quality': 85},
+        blank=True,
+        null=True,
+        verbose_name='Изображение'
+    )
+    
+    # Миниатюра для списка товаров (200x200)
+    thumbnail = ImageSpecField(
+        source='image',
+        processors=[ResizeToFill(200, 200)],
+        format='JPEG',
+        options={'quality': 80}
+    )
+    
+    # Маленькая миниатюра для корзины (50x50)
+    small_thumbnail = ImageSpecField(
+        source='image',
+        processors=[ResizeToFill(50, 50)],
+        format='JPEG',
+        options={'quality': 75}
     )
 
     class Meta:

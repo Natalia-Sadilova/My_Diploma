@@ -10,10 +10,31 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
+    image_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
+    small_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
-        fields = ['id', 'name', 'category', 'category_name']
+        fields = [
+            'id', 'name', 'category', 'category_name',
+            'image_url', 'thumbnail_url', 'small_thumbnail_url'
+        ]
+    
+    def get_image_url(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
+    
+    def get_thumbnail_url(self, obj):
+        if obj.image:
+            return obj.thumbnail.url
+        return None
+    
+    def get_small_thumbnail_url(self, obj):
+        if obj.image:
+            return obj.small_thumbnail.url
+        return None
 
 
 class ParameterSerializer(serializers.ModelSerializer):
@@ -34,11 +55,17 @@ class ProductInfoSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     shop_name = serializers.CharField(source='shop.name', read_only=True)
     parameters = ProductParameterSerializer(source='product_parameters', many=True, read_only=True)
+    product_image = serializers.SerializerMethodField()
     
     class Meta:
         model = ProductInfo
         fields = [
             'id', 'product', 'product_name', 'shop', 'shop_name',
             'external_id', 'model', 'price', 'price_rrc', 'quantity',
-            'parameters'
+            'parameters', 'product_image'
         ]
+    
+    def get_product_image(self, obj):
+        if obj.product.image:
+            return obj.product.thumbnail.url
+        return None

@@ -4,6 +4,8 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_rest_passwordreset.tokens import get_token_generator
+from imagekit.models import ProcessedImageField, ImageSpecField
+from imagekit.processors import ResizeToFill
 
 USER_TYPE_CHOICES = (
     ('shop', 'Магазин'),
@@ -27,23 +29,16 @@ class UserManager(BaseUserManager):
         """Создание обычного пользователя"""
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
-        extra_fields.setdefault('is_active', False)  # Обычный пользователь требует подтверждения email
+        extra_fields.setdefault('is_active', False)
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(self, email, password, **extra_fields):
-        """
-        Создание суперпользователя
-        Суперпользователь создается активным и имеет полные права
-        """
-        # Устанавливаем значения по умолчанию для суперпользователя
+        """Создание суперпользователя"""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True) 
+        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('type', 'buyer')
         
-        # Дополнительные поля для суперпользователя
-        extra_fields.setdefault('type', 'buyer')  
-        
-        # Проверки корректности
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Суперпользователь должен иметь is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
@@ -61,8 +56,8 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     
     email = models.EmailField(_('email address'), unique=True)
-    company = models.CharField(verbose_name='Компания', max_length=40, blank=True)
-    position = models.CharField(verbose_name='Должность', max_length=40, blank=True)
+    
+    # Поле username (обязательно для AbstractUser)
     username_validator = UnicodeUsernameValidator()
     username = models.CharField(
         _('username'),
@@ -72,12 +67,33 @@ class User(AbstractUser):
         error_messages={
             'unique': _("Пользователь с таким именем уже существует."),
         },
-        blank=True,  
-        default='', 
+        blank=True,
+        null=True,
     )
+    
+    company = models.CharField(verbose_name='Компания', max_length=40, blank=True)
+    position = models.CharField(verbose_name='Должность', max_length=40, blank=True)
+    
+    avatar = ProcessedImageField(
+        upload_to='avatars/',
+        processors=[ResizeToFill(200, 200)],
+        format='JPEG',
+        options={'quality': 90},
+        blank=True,
+        null=True,
+        verbose_name='Аватар'
+    )
+    
+    avatar_thumbnail = ImageSpecField(
+        source='avatar',
+        processors=[ResizeToFill(32, 32)],
+        format='JPEG',
+        options={'quality': 80}
+    )
+
     is_active = models.BooleanField(
         _('active'),
-        default=False,  
+        default=False,
         help_text=_(
             'Определяет, следует ли считать этого пользователя активным. '
             'Отмените выбор вместо удаления аккаунтов.'
