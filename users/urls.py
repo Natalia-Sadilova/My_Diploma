@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .social_auth_views import SocialAuthUrlsView, SocialAuthCompleteView
 
 urlpatterns = [
     # Регистрация и авторизация
@@ -10,4 +11,8 @@ urlpatterns = [
     
     # Профиль пользователя
     path('profile/', views.UserProfileView.as_view(), name='profile'),
+
+    # Социальная авторизация
+    path('social/urls/', SocialAuthUrlsView.as_view(), name='social-auth-urls'),
+    path('social/complete/<str:backend>/', SocialAuthCompleteView.as_view(), name='social-auth-complete'),
 ]

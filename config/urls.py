@@ -24,6 +24,7 @@ from products.admin_views import admin_import_products, admin_import_status
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/v1/auth/', include('social_django.urls', namespace='social')),
     path('api/v1/users/', include('users.urls')),
     path('api/v1/products/', include('products.urls')),
     path('api/v1/orders/', include('orders.urls')),
