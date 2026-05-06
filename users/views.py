@@ -4,9 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from django.core.mail import send_mail
-from django.conf import settings
 from django.db import transaction
+from django.conf import settings
 
 from .models import User, ConfirmEmailToken
 from .serializers import (
@@ -15,6 +14,7 @@ from .serializers import (
     LoginSerializer, 
     UserUpdateSerializer
 )
+from .tasks import send_verification_email  # ← ДОБАВЬТЕ ЭТУ СТРОКУ
 
 
 class RegisterView(generics.CreateAPIView):
@@ -46,35 +46,7 @@ class RegisterView(generics.CreateAPIView):
             # Создаем токен подтверждения
             token = ConfirmEmailToken.objects.create(user=user)
             
-            # Отправляем email с подтверждением
-            verification_url = f"{settings.BASE_URL}/api/v1/users/verify-email/?token={token.key}"
-            
-            try:
-                send_mail(
-                    subject='Подтверждение регистрации',
-                    message=f'Здравствуйте! Для подтверждения регистрации перейдите по ссылке:\n{verification_url}',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
-                )
-            except Exception as e:
-                print(f"Email send error: {e}")
-        
-        return Response({
-            'Status': True,
-            'Message': 'Регистрация успешна. На вашу почту отправлено письмо с подтверждением.',
-            'User': UserSerializer(user).data
-        }, status=status.HTTP_201_CREATED)
-    
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        with transaction.atomic():
-            user = serializer.save()
-            token = ConfirmEmailToken.objects.create(user=user)
-            
-            # Асинхронная отправка email
+            # Асинхронная отправка email через Celery
             send_verification_email.delay(
                 user_id=user.id,
                 user_email=user.email,
@@ -83,7 +55,8 @@ class RegisterView(generics.CreateAPIView):
         
         return Response({
             'Status': True,
-            'Message': 'Регистрация успешна. На вашу почту отправлено письмо с подтверждением.'
+            'Message': 'Регистрация успешна. На вашу почту отправлено письмо с подтверждением.',
+            'User': UserSerializer(user).data
         }, status=status.HTTP_201_CREATED)
 
 
