@@ -15,6 +15,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
+    'silk',
     'cacheops',
     'baton',
     'django.contrib.admin',
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'silk.middleware.SilkyMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -319,3 +321,9 @@ CACHEOPS_DEFAULTS = {
 
 # Включаем деградацию при ошибках Redis (чтобы приложение не падало)
 CACHEOPS_DEGRADE_ON_FAILURE = True
+
+# Настройки Silk 
+SILKY_PYTHON_PROFILER = True
+SILKY_AUTHENTICATION = True  
+SILKY_AUTHORISATION = True   
+SILKY_MAX_RECORDED_REQUESTS = 1000  

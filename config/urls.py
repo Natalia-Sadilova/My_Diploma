@@ -34,6 +34,7 @@ urlpatterns = [
     path('admin/import-products/', admin_import_products, name='admin_import_products'),
     path('admin/import-status/<str:task_id>/', admin_import_status, name='admin_import_status'),
     path('api/v1/performance/', include('performance.urls')),
+    path('silk/', include('silk.urls', namespace='silk')),
     
     # drf-spectacular endpoints (НОВЫЕ)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

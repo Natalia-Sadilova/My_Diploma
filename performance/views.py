@@ -1,8 +1,10 @@
+# performance/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.conf import settings
 from products.models import Product, Category, ProductInfo
+from products.views import PartnerOrders
 import time
 
 
@@ -59,3 +61,23 @@ class PerformanceTestView(APIView):
         }
         
         return Response(results)
+
+
+class PartnerOrdersProfilerView(APIView):
+    """
+    Тестовый эндпоинт для профилирования PartnerOrders через Silk
+    
+    GET /api/v1/performance/profile/partner-orders/
+    Требуется авторизация с токеном пользователя типа 'shop'
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Вызываем метод через Silk (будет автоматически профилирован)
+        response = PartnerOrders().get(request)
+        
+        return Response({
+            'status': 'success',
+            'message': 'Request profiled. Check /silk/ for details',
+            'data': response.data
+        })

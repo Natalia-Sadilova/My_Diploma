@@ -160,32 +160,33 @@ class PartnerState(APIView):
 
 
 class PartnerOrders(APIView):
-    """API для получения списка заказов магазина"""
-    permission_classes = [IsAuthenticated]
-    
     def get(self, request):
-        """Получить заказы, содержащие товары этого магазина"""
+        """Получить заказы, содержащие товары этого магазина (оптимизированная версия)"""
         if request.user.type != 'shop':
             return Response({'Status': False, 'Error': 'Только для магазинов'})
         
         try:
             shop = Shop.objects.get(user=request.user)
             
-            # Получаем все заказы, содержащие товары этого магазина
-            from orders.models import Order, OrderItem
-            
+            # ✅ ОПТИМИЗАЦИЯ: один запрос с prefetch_related
             orders = Order.objects.filter(
                 ordered_items__product_info__shop=shop,
                 state__in=['confirmed', 'assembled', 'sent', 'delivered']
+            ).select_related('contact').prefetch_related(
+                # Предварительно загружаем товары этого магазина для каждого заказа
+                models.Prefetch(
+                    'ordered_items',
+                    queryset=OrderItem.objects.filter(
+                        product_info__shop=shop
+                    ).select_related('product_info__product'),
+                    to_attr='shop_items'
+                )
             ).distinct()
             
             orders_data = []
             for order in orders:
-                # Получаем только товары этого магазина в заказе
-                items = OrderItem.objects.filter(
-                    order=order,
-                    product_info__shop=shop
-                ).select_related('product_info__product')
+                # ✅ Теперь items уже загружены, нет лишних запросов!
+                items = order.shop_items  # используем prefetch_related результат
                 
                 items_data = []
                 for item in items:
@@ -221,6 +222,26 @@ class PartnerOrders(APIView):
             
         except Shop.DoesNotExist:
             return Response({'Status': False, 'Error': 'Магазин не найден'})
+        
+class PartnerOrdersProfilerView(APIView):
+    """
+    Тестовый эндпоинт для профилирования PartnerOrders через Silk
+    
+    GET /api/v1/performance/profile/partner-orders/
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        from products.views import PartnerOrders
+        
+        # Вызываем метод через Silk (будет автоматически профилирован)
+        response = PartnerOrders().get(request)
+        
+        return Response({
+            'status': 'success',
+            'message': 'Request profiled. Check /silk/ for details',
+            'data': response.data
+        })
 
 
 class CategoryListView(generics.ListAPIView):
