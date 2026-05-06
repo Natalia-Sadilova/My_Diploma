@@ -110,6 +110,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle', # Для неавторизованных пользователей
+        'rest_framework.throttling.UserRateThrottle', # Для авторизованных пользователей
+    ],
+    
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',           # Аноним: 100 запросов в день
+        'user': '1000/day',          # Пользователь: 1000 запросов в день
+        'registration': '3/hour',    # Регистрация: 3 попытки в час
+    }
 }
 
 # JWT Settings

@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.db import transaction
 from django.conf import settings
+from .throttles import RegistrationAnonRateThrottle
 
 from .models import User, ConfirmEmailToken
 from .serializers import (
@@ -35,6 +36,7 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [AllowAny]
     serializer_class = RegisterSerializer
+    throttle_classes = [RegistrationAnonRateThrottle]
     
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
